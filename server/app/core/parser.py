@@ -625,3 +625,5 @@ class SQLParser:
             return
 
         logger.warning("Unrecognized ALTER TABLE operation: %s", raw)
+
+# Made with Bob

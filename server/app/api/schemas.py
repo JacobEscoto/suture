@@ -39,8 +39,8 @@ class TableChange(BaseModel):
 
 class SchemaChanges(BaseModel):
     tables: List[TableChange] = Field(default_factory=list)
-    indexes: List[IndexChange] = Field(default_factory=list)  # Standalone indexes
-    summary: Dict[str, int] = Field(default_factory=dict)  # e.g., {"tables_added": 2, "columns_modified": 5}
+    indexes: List[IndexChange] = Field(default_factory=list)
+    summary: Dict[str, int] = Field(default_factory=dict)
 
 class AnalysisResult(BaseModel):
     status: str  # "success", "error", "no_changes"
