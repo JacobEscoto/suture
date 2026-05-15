@@ -1,0 +1,35 @@
+# Dependencies & Environments
+node_modules/
+client/node_modules/
+server/venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Temporary & Build files
+.next/
+client/.next/
+dist/
+build/
+.cache/
+
+# Logs & Sensible Data
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Other
+.git/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.pdf
+
+# --- Reportes de Sesión ---
+# Es mejor que Bob no se lea a sí mismo infinitamente
+bob_sessions/

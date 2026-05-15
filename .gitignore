@@ -1,0 +1,20 @@
+# Frontend (Next.js)
+client/node_modules/
+client/.next/
+client/out/
+client/build/
+client/.env*
+client/*.log
+
+# Backend (Python)
+server/venv/
+server/__pycache__/
+server/*.pyc
+server/.env
+server/requirements.txt.log
+
+# Other
+.DS_Store
+Thumbs.db
+
+!bob_sessions/
