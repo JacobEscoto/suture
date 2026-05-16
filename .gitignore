@@ -8,8 +8,8 @@ client/*.log
 
 # Backend (Python)
 server/venv/
-server/__pycache__/
-server/*.pyc
+__pycache__/
+server/*/*.pyc
 server/.env
 server/requirements.txt.log
 

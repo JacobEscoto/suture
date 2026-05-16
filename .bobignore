@@ -30,6 +30,4 @@ Thumbs.db
 *.ico
 *.pdf
 
-# --- Reportes de Sesión ---
-# Es mejor que Bob no se lea a sí mismo infinitamente
 bob_sessions/
