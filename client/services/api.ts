@@ -2,8 +2,7 @@ import axios from "axios";
 import { SchemaComparisonRequest, AnalysisResult } from "../types/api";
 
 const api = axios.create({
-    //baseURL: process.env.NEXT_PUBLIC_API_URL,
-    baseURL: "http://localhost:8000/api",
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -16,6 +15,13 @@ export const compareSchemas = async (data: SchemaComparisonRequest): Promise<Ana
     } catch (error: any) {
         if (error.response) {
             const detail = error.response.data?.detail;
+
+            if (detail && typeof detail === 'object' && detail.errors) {
+                const parseError = new Error(detail.message || "SQL Parse Error");
+                (parseError as any).errors = detail.errors;
+                (parseError as any).response = error.response;
+                throw parseError;
+            }
 
             if (detail && typeof detail === 'object' && detail.message) {
                 throw new Error(detail.message);

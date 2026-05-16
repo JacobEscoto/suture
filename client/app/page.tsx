@@ -4,7 +4,6 @@ import SchemaSplitEditor from '@/components/editor/SchemaSplitEditor';
 import ComparisonResults from '@/components/results/ComparisonResults';
 import AppNavigation from '@/components/layout/AppNavigation';
 import HeroSection from '@/components/layout/HeroSection';
-import ErrorAlert from '@/components/layout/ErrorAlert';
 import AppFooter from '@/components/layout/AppFooter';
 import { useCompare } from '@/hooks/useCompare';
 
@@ -19,12 +18,13 @@ export default function Home() {
         <HeroSection />
 
         <div className="w-full bg-zinc-900/30 border border-zinc-900/80 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-          <SchemaSplitEditor onCompare={executeCompare} onReset={resetCompare} isLoading={loading} />
+          <SchemaSplitEditor
+            onCompare={executeCompare}
+            onReset={resetCompare}
+            isLoading={loading}
+            parseErrors={parseErrors}
+          />
         </div>
-
-        {(error || (parseErrors && parseErrors.length > 0)) && (
-          <ErrorAlert message={error || undefined} errors={parseErrors} />
-        )}
 
         {result && (
           <div className="w-full border-t border-zinc-900 pt-4">

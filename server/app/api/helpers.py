@@ -36,7 +36,12 @@ def parse_schema_safe(sql: str, editor: str, editor_label: str) -> SchemaDefinit
     """
     parser = SQLParser()
     try:
-        return parser.parse(sql)
+        schema = parser.parse(sql)
+
+        if sql.strip() and not schema.tables:
+            raise ValueError("The provided SQL text does not contain any valid table structures or definitions.")
+
+        return schema
     except Exception as e:
         error = ParseError(
             error_type="parse_error",
