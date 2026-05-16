@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { compareSchemas } from "@/services/api";
 import { SchemaComparisonRequest, AnalysisResult } from "@/types/api";
 
@@ -7,7 +7,7 @@ export function useCompare() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const executeCompare = async (data: SchemaComparisonRequest) => {
+    const executeCompare = useCallback(async (data: SchemaComparisonRequest) => {
         setLoading(true);
         setError(null);
         try {
@@ -19,13 +19,13 @@ export function useCompare() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const resetCompare = () => {
+    const resetCompare = useCallback(() => {
         setResult(null);
         setError(null);
         setLoading(false);
-    };
+    }, []);
 
     return {
         result,

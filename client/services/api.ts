@@ -2,7 +2,7 @@ import axios from "axios";
 import { SchemaComparisonRequest, AnalysisResult } from "../types/api";
 
 const api = axios.create({
-    baseURL: "http://localhost:8000/api",
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
