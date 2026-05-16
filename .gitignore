@@ -16,5 +16,6 @@ server/requirements.txt.log
 # Other
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
 
 !bob_sessions/

@@ -15,6 +15,7 @@ build/
 
 # Logs & Sensible Data
 *.log
+*.tsbuildinfo
 .env
 .env.*
 .DS_Store
