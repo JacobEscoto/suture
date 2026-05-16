@@ -1,4 +1,5 @@
 from typing import List, Tuple, Dict, Any
+import sqlite3
 from fastapi import HTTPException
 from app.api.schemas import (
     ParseError,
@@ -389,3 +390,71 @@ def calculate_blast_radius(diffs) -> Dict[str, Any]:
 
 
 # Made with Bob
+
+
+def validate_sql_execution(migration_sql: str, rollback_sql: str) -> Dict[str, Any]:
+    """Validate SQL execution in a temporary SQLite in-memory database.
+
+    Tests both migration and rollback SQL scripts to ensure they are 100% executable
+    before returning them to the client. This provides a sandbox verification layer.
+
+    Args:
+        migration_sql: The forward migration SQL script to test.
+        rollback_sql: The rollback SQL script to test.
+
+    Returns:
+        Dictionary with validation status:
+        {
+            "success": bool,  # True if both scripts executed successfully
+            "error_message": str | None,  # Error message if validation failed
+            "failed_script": str | None  # "migration" or "rollback" if failed
+        }
+    """
+    conn = None
+    try:
+        # Create a temporary in-memory SQLite database
+        conn = sqlite3.connect(":memory:")
+        cursor = conn.cursor()
+
+        # Test migration SQL execution
+        try:
+            # Execute the entire migration script
+            cursor.executescript(migration_sql)
+            conn.commit()
+        except sqlite3.Error as e:
+            return {
+                "success": False,
+                "error_message": f"Migration SQL execution failed: {str(e)}",
+                "failed_script": "migration"
+            }
+
+        # Test rollback SQL execution
+        try:
+            # Execute the rollback script to ensure clean reversal
+            cursor.executescript(rollback_sql)
+            conn.commit()
+        except sqlite3.Error as e:
+            return {
+                "success": False,
+                "error_message": f"Rollback SQL execution failed: {str(e)}",
+                "failed_script": "rollback"
+            }
+
+        # Both scripts executed successfully
+        return {
+            "success": True,
+            "error_message": None,
+            "failed_script": None
+        }
+
+    except Exception as e:
+        # Catch any unexpected errors
+        return {
+            "success": False,
+            "error_message": f"Unexpected validation error: {str(e)}",
+            "failed_script": "unknown"
+        }
+    finally:
+        # Always close the connection
+        if conn:
+            conn.close()

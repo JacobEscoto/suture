@@ -95,9 +95,11 @@ class MigrationGenerator:
         for col in table.columns.values():
             column_defs.append(f"    {self._generate_column_definition(col)}")
 
-        # Add table-level constraints
+        # Add table-level constraints (only if they generate valid SQL)
         for constraint in table.constraints:
-            column_defs.append(f"    {self._generate_constraint_definition(constraint)}")
+            constraint_def = self._generate_constraint_definition(constraint)
+            if constraint_def.strip():  # Only add non-empty constraint definitions
+                column_defs.append(f"    {constraint_def}")
 
         lines.append(",\n".join(column_defs))
         lines.append(");")
@@ -314,18 +316,24 @@ class MigrationGenerator:
             parts.append(f"CONSTRAINT {self._quote_identifier(constraint.name)}")
 
         if constraint.constraint_type == ConstraintType.PRIMARY_KEY:
-            cols = ", ".join(self._quote_identifier(c) for c in constraint.columns)
-            parts.append(f"PRIMARY KEY ({cols})")
+            # Only generate PRIMARY KEY if columns are specified
+            if constraint.columns:
+                cols = ", ".join(self._quote_identifier(c) for c in constraint.columns)
+                parts.append(f"PRIMARY KEY ({cols})")
         elif constraint.constraint_type == ConstraintType.FOREIGN_KEY:
-            cols = ", ".join(self._quote_identifier(c) for c in constraint.columns)
-            parts.append(f"FOREIGN KEY ({cols})")
-            if constraint.references:
-                ref_table, ref_cols = constraint.references
-                ref_cols_str = ", ".join(self._quote_identifier(c) for c in ref_cols)
-                parts.append(f"REFERENCES {self._quote_identifier(ref_table)} ({ref_cols_str})")
+            # Only generate FOREIGN KEY if columns are specified
+            if constraint.columns:
+                cols = ", ".join(self._quote_identifier(c) for c in constraint.columns)
+                parts.append(f"FOREIGN KEY ({cols})")
+                if constraint.references:
+                    ref_table, ref_cols = constraint.references
+                    ref_cols_str = ", ".join(self._quote_identifier(c) for c in ref_cols)
+                    parts.append(f"REFERENCES {self._quote_identifier(ref_table)} ({ref_cols_str})")
         elif constraint.constraint_type == ConstraintType.UNIQUE:
-            cols = ", ".join(self._quote_identifier(c) for c in constraint.columns)
-            parts.append(f"UNIQUE ({cols})")
+            # Only generate UNIQUE if columns are specified
+            if constraint.columns:
+                cols = ", ".join(self._quote_identifier(c) for c in constraint.columns)
+                parts.append(f"UNIQUE ({cols})")
         elif constraint.constraint_type == ConstraintType.CHECK:
             # Use the raw definition for CHECK constraints
             parts.append(constraint.definition)
