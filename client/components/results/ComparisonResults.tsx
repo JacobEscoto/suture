@@ -1,6 +1,12 @@
 'use client';
 
 import React from 'react';
+import Editor from 'react-simple-code-editor';
+import { highlight, languages } from 'prismjs';
+import "prismjs/components/prism-sql";
+import "prismjs/themes/prism-tomorrow.css";
+
+import { Copy } from 'lucide-react';
 import { AnalysisResult } from '@/types/api';
 
 interface ComparisonResultsProps {
@@ -64,14 +70,26 @@ const ComparisonResults = React.memo(function ComparisonResults({ result }: Comp
           <label className="text-sm font-medium text-zinc-400">Standalone Migration Script</label>
           <button
             onClick={handleCopy}
-            className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+            className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
           >
+            <Copy className="w-3.5 h-3.5"/>
             Copy SQL
           </button>
         </div>
-        <pre className="w-full max-h-[500px] overflow-y-auto p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-sm leading-relaxed whitespace-pre-wrap">
-          {migration_sql}
-        </pre>
+        <div className="w-full max-h-[500px] p-2 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-sm overflow-y-auto">
+          <Editor
+            value={migration_sql}
+            onValueChange={() => {}}
+            highlight={(code) => highlight(code, languages.sql, "sql")}
+            padding={16}
+            style={{
+              fontFamily: '"Fira code", "Fira Mono", monospace',
+              fontSize: 14,
+            }}
+            textareaClassName="outline-none pointer-events-none"
+            readOnly
+          />
+        </div>
       </div>
     </div>
   );
