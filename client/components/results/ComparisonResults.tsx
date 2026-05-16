@@ -12,6 +12,7 @@ import {
   Trash2,
   Layers,
   Copy,
+  Check,
   AlertTriangle,
   ChevronDown,
   ChevronUp,
@@ -195,19 +196,22 @@ const RiskMeter = React.memo(function RiskMeter({ blastRadius }: { blastRadius: 
 const ComparisonResults = React.memo(function ComparisonResults({ result }: ComparisonResultsProps) {
   const { changes_detected, migration_sql, rollback_sql, blast_radius, warnings } = result;
   const [activeTab, setActiveTab] = useState<'migration' | 'rollback'>('migration');
+  const [isCopied, setIsCopied] = useState(false);
 
   const handleCopyMigration = useCallback(() => {
     navigator.clipboard.writeText(migration_sql);
-    alert('Migration SQL copied to clipboard');
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   }, [migration_sql]);
 
   const handleCopyRollback = useCallback(() => {
     navigator.clipboard.writeText(rollback_sql);
-    alert('Rollback SQL copied to clipboard');
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   }, [rollback_sql]);
 
   return (
-    <div className="w-full flex flex-col gap-8 mt-8 animate-fade-in">
+    <div className="w-full flex flex-col gap-8 mt-8 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
 
       {/* Risk Meter */}
       <RiskMeter blastRadius={blast_radius} />
@@ -291,10 +295,23 @@ const ComparisonResults = React.memo(function ComparisonResults({ result }: Comp
           </div>
           <button
             onClick={activeTab === 'migration' ? handleCopyMigration : handleCopyRollback}
-            className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              isCopied
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
+            }`}
           >
-            <Copy className="w-3.5 h-3.5" />
-            Copy SQL
+            {isCopied ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5" />
+                Copy SQL
+              </>
+            )}
           </button>
         </div>
 

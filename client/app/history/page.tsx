@@ -66,6 +66,7 @@ export default function HistoryPage() {
   const router = useRouter();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -79,17 +80,20 @@ export default function HistoryPage() {
         setHistory(parsed);
       }
     } catch (error) {
-      console.error('Failed to load history:', error);
+      // Silently handle error - history will remain empty
     } finally {
       setLoading(false);
     }
   };
 
   const clearHistory = () => {
-    if (confirm('Are you sure you want to clear all deployment history? This action cannot be undone.')) {
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
-      setHistory([]);
-    }
+    setShowConfirm(true);
+  };
+
+  const confirmClear = () => {
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    setHistory([]);
+    setShowConfirm(false);
   };
 
   const formatDate = (timestamp: string) => {
@@ -126,22 +130,58 @@ export default function HistoryPage() {
   };
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-50 flex flex-col">
+    <main className="min-h-screen bg-black text-zinc-50 flex flex-col" role="main">
       <AppNavigation />
 
-      <section className="flex-1 max-w-7xl w-full mx-auto px-4 py-12 flex flex-col gap-8">
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-labelledby="confirm-title"
+          aria-describedby="confirm-description"
+        >
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h3 id="confirm-title" className="text-lg font-bold text-white mb-2">
+              Clear Deployment History?
+            </h3>
+            <p id="confirm-description" className="text-sm text-zinc-400 mb-6">
+              This will permanently delete all {history.length} deployment records. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium transition-colors"
+                aria-label="Cancel clearing history"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClear}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-medium transition-colors"
+                aria-label="Confirm clear history"
+              >
+                Clear History
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section className="flex-1 max-w-7xl w-full mx-auto px-4 py-12 flex flex-col gap-8" aria-label="Deployment history content">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/')}
-              className="p-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition-colors"
+              className="p-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800/60 transition-all duration-300 shadow-lg shadow-black/20"
+              aria-label="Back to Editor"
               title="Back to Editor"
             >
               <ArrowLeft className="w-5 h-5 text-zinc-400" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
+              <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight antialiased">
                 <History className="w-8 h-8 text-indigo-400" />
                 Deployment History
               </h1>
@@ -154,7 +194,7 @@ export default function HistoryPage() {
           {history.length > 0 && (
             <button
               onClick={clearHistory}
-              className="px-4 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 font-medium transition-colors flex items-center gap-2"
+              className="px-4 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 font-medium transition-all duration-300 flex items-center gap-2 shadow-lg shadow-rose-500/10"
             >
               <Trash2 className="w-4 h-4" />
               Clear History
@@ -165,7 +205,7 @@ export default function HistoryPage() {
         {/* Stats Cards */}
         {history.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col items-center justify-center gap-2">
+            <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:border-zinc-700 hover:bg-zinc-900 transition-all duration-300 shadow-2xl shadow-black/40">
               <Database className="w-6 h-6 text-indigo-400" />
               <div className="text-2xl font-bold text-indigo-400">{stats.total}</div>
               <div className="text-xs text-zinc-400 font-medium">Total Deployments</div>
@@ -189,7 +229,7 @@ export default function HistoryPage() {
         )}
 
         {/* History Table */}
-        <div className="bg-zinc-900/30 border border-zinc-900/80 rounded-2xl overflow-hidden">
+        <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-2xl overflow-hidden shadow-2xl shadow-black/40 hover:border-zinc-700 transition-all duration-300">
           {loading ? (
             <div className="p-12 flex flex-col items-center justify-center gap-4">
               <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin" />
