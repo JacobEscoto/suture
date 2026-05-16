@@ -336,16 +336,12 @@ class MigrationGenerator:
         """Generate CREATE INDEX statement."""
         unique = "UNIQUE " if index.unique else ""
         cols = ", ".join(self._quote_identifier(c) for c in index.columns)
+        using = f" USING {index.index_type}" if index.index_type else ""
 
-        stmt = (
+        return (
             f"CREATE {unique}INDEX {self._quote_identifier(index.name)} "
-            f"ON {self._quote_identifier(index.table)} ({cols})"
+            f"ON {self._quote_identifier(index.table)}{using} ({cols});"
         )
-
-        if index.index_type:
-            stmt += f" USING {index.index_type}"
-
-        return stmt + ";"
 
     def _generate_drop_index(self, index_name: str) -> str:
         """Generate DROP INDEX statement."""

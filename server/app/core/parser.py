@@ -487,6 +487,12 @@ class SQLParser:
         schema: SchemaDefinition,
         unique: bool = False,
     ) -> None:
+        """
+        Parse CREATE [UNIQUE] INDEX statement.
+
+        sqlparse may tokenize 'table(col1, col2)' as a Function token,
+        so we need to handle both Parenthesis and Function token types.
+        """
         tokens = list(statement.flatten())
         index_name: Optional[str] = None
         table_name: Optional[str] = None
@@ -501,25 +507,49 @@ class SQLParser:
                         break
                 break
 
-        # Table name follows ON keyword
-        for i, token in enumerate(tokens):
-            if token.ttype in _DDL_OR_KEYWORD and token.value.upper() == "ON":
-                for j in range(i + 1, len(tokens)):
-                    if tokens[j].ttype in _NAME_TYPES:
-                        table_name = tokens[j].value.strip('"').strip("`").strip("'")
-                        break
+        # After ON keyword, we may have either:
+        # 1. Separate tokens: table_name ( col1, col2 )
+        # 2. Function token: table_name(col1, col2)
+        # We need to handle both cases
+
+        # First, try to find a Function token (e.g., "users(username)")
+        from sqlparse.sql import Function
+        for token in statement.tokens:
+            if isinstance(token, Function):
+                # Extract table name and columns from function token
+                func_str = str(token)
+                if '(' in func_str:
+                    table_name = func_str[:func_str.index('(')].strip().strip('"').strip("`").strip("'")
+                    cols_str = func_str[func_str.index('(')+1:func_str.rindex(')')].strip()
+                    columns = [
+                        col.strip().strip('"').strip("`").strip("'")
+                        for col in cols_str.split(",")
+                        if col.strip()
+                    ]
                 break
 
-        # Columns from the first Parenthesis token
-        for token in statement.tokens:
-            if isinstance(token, Parenthesis):
-                cols_str = str(token)[1:-1]
-                columns = [
-                    col.strip().strip('"').strip("`").strip("'")
-                    for col in cols_str.split(",")
-                    if col.strip()
-                ]
-                break
+        # If no Function token found, try the traditional approach
+        if not table_name:
+            # Table name follows ON keyword
+            for i, token in enumerate(tokens):
+                if token.ttype in _DDL_OR_KEYWORD and token.value.upper() == "ON":
+                    for j in range(i + 1, len(tokens)):
+                        if tokens[j].ttype in _NAME_TYPES:
+                            table_name = tokens[j].value.strip('"').strip("`").strip("'")
+                            break
+                    break
+
+        # If no columns yet, look for Parenthesis token
+        if not columns:
+            for token in statement.tokens:
+                if isinstance(token, Parenthesis):
+                    cols_str = str(token)[1:-1].strip()
+                    columns = [
+                        col.strip().strip('"').strip("`").strip("'")
+                        for col in cols_str.split(",")
+                        if col.strip()
+                    ]
+                    break
 
         if not (index_name and table_name and columns):
             logger.warning(
@@ -536,10 +566,15 @@ class SQLParser:
             columns=columns,
             unique=unique,
         )
-        schema.indexes.append(index_def)
 
+        # Associate index with its table if the table exists
         if table_name in schema.tables:
             schema.tables[table_name].indexes.append(index_def)
+            logger.debug("Index '%s' added to table '%s'", index_name, table_name)
+        else:
+            # If table doesn't exist yet, add to schema-level indexes
+            schema.indexes.append(index_def)
+            logger.debug("Index '%s' added to schema-level indexes (table '%s' not found)", index_name, table_name)
 
     # Alter table
     def _process_alter_statement(self, statement: Statement, schema: SchemaDefinition) -> None:

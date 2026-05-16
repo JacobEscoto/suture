@@ -214,30 +214,34 @@ def _transform_table_changes(table: ComparatorTableChange) -> ApiTableChange:
     )
 
 def _process_comparison_results(diffs) -> tuple[list[str], list[ApiTableChange], dict[str, int]]:
-    """Extrae advertencias, reportes de tablas y el resumen de métricas."""
     warnings: list[str] = []
     tables_to_report: list[ApiTableChange] = []
 
-    # 1. Advertencias de tablas eliminadas
     for table in diffs.tables_deleted:
         warnings.append(f"⚠️ Table '{table.name}' will be dropped - data loss will occur")
 
-    # 2. Procesar tablas modificadas
     for table in diffs.tables_modified:
         warnings.extend(_generate_warnings_for_table(table))
         tables_to_report.append(_transform_table_changes(table))
 
-    # 3. Tipado explícito y cálculo de índices
-    idx_added: int = sum(len(table.indexes_added) for table in diffs.tables_modified)
-    idx_deleted: int = sum(len(table.indexes_deleted) for table in diffs.tables_modified)
+    idx_added = (
+        sum(len(table.indexes_added) for table in diffs.tables_modified)
+        + len(diffs.indexes_added)
+    )
+    idx_deleted= (
+        sum(len(table.indexes_deleted) for table in diffs.tables_modified)
+        + len(diffs.indexes_deleted)
+    )
 
-    # 4. Acceso directo a atributos sin getattr
+    for idx in diffs.indexes_deleted:
+        warnings.append(f"⚠️ Index '{idx.name}' on '{idx.table}' will be dropped")
+
     summary_data: dict[str, int] = {
         "tables_added": len(diffs.tables_added),
         "tables_modified": len(diffs.tables_modified),
         "tables_deleted": len(diffs.tables_deleted),
         "indexes_added": idx_added,
-        "indexes_deleted": idx_deleted
+        "indexes_deleted": idx_deleted,
     }
 
     return warnings, tables_to_report, summary_data
