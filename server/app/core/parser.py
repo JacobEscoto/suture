@@ -204,8 +204,7 @@ class SQLParser:
     def _process_create_table(self, statement: Statement, schema: SchemaDefinition) -> None:
         table_name = self._extract_table_name(statement)
         if not table_name:
-            logger.warning("Could not extract table name from: %s", statement)
-            return
+            raise ValueError(f"Could not extract table name from CREATE TABLE statement: {statement}")
 
         table_def = TableDefinition(name=table_name)
         self._extract_table_body(statement, table_def)
@@ -552,13 +551,12 @@ class SQLParser:
                     break
 
         if not (index_name and table_name and columns):
-            logger.warning(
-                "Incomplete CREATE INDEX — name=%s, table=%s, columns=%s",
-                index_name,
-                table_name,
-                columns,
+            raise ValueError(
+                f"Incomplete CREATE INDEX statement: "
+                f"index_name={index_name or 'missing'}, "
+                f"table_name={table_name or 'missing'}, "
+                f"columns={columns or 'missing'}"
             )
-            return
 
         index_def = IndexDefinition(
             name=index_name,   # type: ignore[arg-type]
