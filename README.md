@@ -1,8 +1,12 @@
-![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![SQLite Sandbox](https://img.shields.io/badge/SQLite_Sandbox-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+<p align="center">
+    <img src="client/public/banner.png" alt="Suturé Banner" width="100%" style="max-width: 800px; border-radius: 8px;">
+</p>
+
+<p align="center">
+    <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js">
+    <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
+    <img src="https://img.shields.io/badge/SQLite_Sandbox-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite Sandbox">
+</p>
 
 # Suturé
 
