@@ -13,33 +13,32 @@ export const compareSchemas = async (data: SchemaComparisonRequest): Promise<Ana
         const response = await api.post<AnalysisResult>("/compare", data);
         return response.data;
     } catch (error: any) {
-        // Handle Axios errors
         if (error.response) {
-            // FastAPI HTTPException returns error in 'detail' field
             const detail = error.response.data?.detail;
 
-            // Handle different error formats
+            if (detail && typeof detail === 'object' && detail.message) {
+                throw new Error(detail.message);
+            }
+
+            if (Array.isArray(detail)) {
+                const errorMessages = detail
+                    .map((err: any) => `${err.loc?.join('.') || 'Field'}: ${err.msg}`)
+                    .join('; ');
+                throw new Error(errorMessages);
+            }
+
             if (typeof detail === 'string') {
                 throw new Error(detail);
-            } else if (Array.isArray(detail)) {
-                // Validation errors (422) return array of error objects
-                const errorMessages = detail.map((err: any) =>
-                    `${err.loc?.join('.') || 'Field'}: ${err.msg}`
-                ).join('; ');
-                throw new Error(errorMessages);
-            } else if (detail && typeof detail === 'object') {
-                throw new Error(JSON.stringify(detail));
-            } else {
-                // Fallback for other response formats
-                throw new Error(`Server error (${error.response.status}): ${error.response.statusText}`);
             }
-        } else if (error.request) {
-            // Request was made but no response received
-            throw new Error("Error connecting to the Suturé server. Please ensure the server is running.");
-        } else {
-            // Something else happened
-            throw new Error(error.message || "An unexpected error occurred");
+
+            throw new Error(`Server error (${error.response.status}): ${error.response.statusText}`);
         }
+
+        if (error.request) {
+            throw new Error("Error connecting to the Suturé server. Please ensure the server is running.");
+        }
+
+        throw new Error(error.message || "An unexpected error occurred");
     }
 };
 
