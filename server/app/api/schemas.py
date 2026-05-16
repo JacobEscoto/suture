@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Any
 from pydantic import BaseModel, Field
 
 class SchemaComparisonRequest(BaseModel):
@@ -60,5 +60,7 @@ class AnalysisResult(BaseModel):
     status: str
     changes_detected: SchemaChanges
     migration_sql: str
+    rollback_sql: str
+    blast_radius: Dict[str, Any]
     errors: List[ParseError] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)

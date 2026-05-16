@@ -7,6 +7,7 @@ from app.api.schemas import (
 from app.api.helpers import (
     parse_schema_safe,
     build_comparison_summary,
+    calculate_blast_radius,
 )
 from app.core.comparator import SchemaComparator
 from app.core.generator import MigrationGenerator
@@ -39,6 +40,8 @@ def compare_schemas(request: SchemaComparisonRequest):
     generator = MigrationGenerator()
     migration_sql, rollback_sql = generator.generate(diffs)
 
+    blast_radius_data = calculate_blast_radius(diffs)
+
     # Build comparison summary with warnings and transformed tables
     warnings, tables_to_report, summary_data = build_comparison_summary(diffs)
 
@@ -49,6 +52,8 @@ def compare_schemas(request: SchemaComparisonRequest):
             summary=summary_data
         ),
         migration_sql=migration_sql,
+        rollback_sql=rollback_sql,
+        blast_radius=blast_radius_data,
         errors=[],
         warnings=warnings
     )

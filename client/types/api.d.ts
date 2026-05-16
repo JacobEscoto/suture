@@ -60,10 +60,25 @@ export interface ParseError {
   editor: 'v1' | 'v2';
 }
 
+export interface BlastRadius {
+  risk_level: 'LOW' | 'MEDIUM' | 'CRITICAL';
+  score: number;
+  destructive_actions_count: number;
+  affected_tables: string[];
+  details: {
+    tables_dropped: string[];
+    columns_dropped: Array<{ table: string; column: string }>;
+    type_changes: Array<{ table: string; column: string; old_type: string; new_type: string }>;
+    not_null_additions: Array<{ table: string; column: string }>;
+  };
+}
+
 export interface AnalysisResult {
   status: string;
   changes_detected: SchemaChanges;
   migration_sql: string;
+  rollback_sql: string;
+  blast_radius: BlastRadius;
   errors: ParseError[];
   warnings: string[];
 }

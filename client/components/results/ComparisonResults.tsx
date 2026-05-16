@@ -17,7 +17,10 @@ import {
   ChevronUp,
   Plus,
   Minus,
-  RefreshCw
+  RefreshCw,
+  Shield,
+  ShieldAlert,
+  ShieldCheck
 } from 'lucide-react';
 import { AnalysisResult, TableChange, ColumnChange } from '@/types/api';
 
@@ -116,16 +119,98 @@ const TableChangeCard = React.memo(function TableChangeCard({ table }: { table: 
   );
 });
 
-const ComparisonResults = React.memo(function ComparisonResults({ result }: ComparisonResultsProps) {
-  const { changes_detected, migration_sql, warnings } = result;
+const RiskMeter = React.memo(function RiskMeter({ blastRadius }: { blastRadius: AnalysisResult['blast_radius'] }) {
+  const { risk_level, score, destructive_actions_count } = blastRadius;
 
-  const handleCopy = useCallback(() => {
+  const riskConfig = {
+    LOW: {
+      color: 'emerald',
+      icon: ShieldCheck,
+      bgClass: 'bg-emerald-500/10',
+      borderClass: 'border-emerald-500/20',
+      textClass: 'text-emerald-400',
+      progressClass: 'bg-emerald-500',
+      message: 'Safe migration with minimal risk'
+    },
+    MEDIUM: {
+      color: 'amber',
+      icon: Shield,
+      bgClass: 'bg-amber-500/10',
+      borderClass: 'border-amber-500/20',
+      textClass: 'text-amber-400',
+      progressClass: 'bg-amber-500',
+      message: 'Moderate risk - review breaking changes'
+    },
+    CRITICAL: {
+      color: 'rose',
+      icon: ShieldAlert,
+      bgClass: 'bg-rose-500/10',
+      borderClass: 'border-rose-500/20',
+      textClass: 'text-rose-400',
+      progressClass: 'bg-rose-500',
+      message: 'High risk - data loss possible'
+    }
+  };
+
+  const config = riskConfig[risk_level];
+  const Icon = config.icon;
+
+  return (
+    <div className={`${config.bgClass} border ${config.borderClass} rounded-xl p-5 flex flex-col gap-4`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Icon className={`w-6 h-6 ${config.textClass}`} />
+          <div className="flex flex-col">
+            <span className={`text-sm font-bold ${config.textClass} uppercase tracking-wide`}>
+              Risk Level: {risk_level}
+            </span>
+            <span className="text-xs text-zinc-400 font-medium">{config.message}</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className={`text-2xl font-bold ${config.textClass}`}>{score}%</span>
+          <span className="text-xs text-zinc-500 font-medium">Risk Score</span>
+        </div>
+      </div>
+
+      <div className="w-full bg-zinc-900 rounded-full h-2.5 overflow-hidden">
+        <div
+          className={`h-full ${config.progressClass} transition-all duration-500 ease-out`}
+          style={{ width: `${score}%` }}
+        />
+      </div>
+
+      {destructive_actions_count > 0 && (
+        <div className="flex items-center gap-2 text-xs">
+          <AlertTriangle className={`w-3.5 h-3.5 ${config.textClass}`} />
+          <span className="text-zinc-400">
+            <span className={`font-bold ${config.textClass}`}>{destructive_actions_count}</span> destructive operation{destructive_actions_count !== 1 ? 's' : ''} detected
+          </span>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const ComparisonResults = React.memo(function ComparisonResults({ result }: ComparisonResultsProps) {
+  const { changes_detected, migration_sql, rollback_sql, blast_radius, warnings } = result;
+  const [activeTab, setActiveTab] = useState<'migration' | 'rollback'>('migration');
+
+  const handleCopyMigration = useCallback(() => {
     navigator.clipboard.writeText(migration_sql);
-    alert('Código copiado al portapapeles');
+    alert('Migration SQL copied to clipboard');
   }, [migration_sql]);
+
+  const handleCopyRollback = useCallback(() => {
+    navigator.clipboard.writeText(rollback_sql);
+    alert('Rollback SQL copied to clipboard');
+  }, [rollback_sql]);
 
   return (
     <div className="w-full flex flex-col gap-8 mt-8 animate-fade-in">
+
+      {/* Risk Meter */}
+      <RiskMeter blastRadius={blast_radius} />
 
       {warnings && warnings.length > 0 && (
         <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 flex flex-col gap-2">
@@ -180,20 +265,42 @@ const ComparisonResults = React.memo(function ComparisonResults({ result }: Comp
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-zinc-400">Standalone Migration Script</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('migration')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                activeTab === 'migration'
+                  ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}
+            >
+              Migration Script (Up)
+            </button>
+            <button
+              onClick={() => setActiveTab('rollback')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                activeTab === 'rollback'
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}
+            >
+              Rollback Script (Down)
+            </button>
+          </div>
           <button
-            onClick={handleCopy}
+            onClick={activeTab === 'migration' ? handleCopyMigration : handleCopyRollback}
             className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <Copy className="w-3.5 h-3.5" />
             Copy SQL
           </button>
         </div>
+
         <div className="w-full max-h-[500px] p-2 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-sm overflow-y-auto">
           <Editor
-            value={migration_sql}
+            value={activeTab === 'migration' ? migration_sql : rollback_sql}
             onValueChange={() => {}}
             highlight={(code) => highlight(code, languages.sql, "sql")}
             padding={16}

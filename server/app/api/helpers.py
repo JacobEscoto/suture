@@ -263,4 +263,124 @@ def build_comparison_summary(diffs) -> Tuple[List[str], List[ApiTableChange], Di
 
     return warnings, tables_to_report, summary_data
 
+def calculate_blast_radius(diffs) -> Dict[str, Any]:
+    """Calculate migration risk based on schema changes.
+
+    Analyzes the diffs object to determine the risk level of a migration by
+    identifying destructive operations and breaking changes.
+
+    Risk Levels:
+    - CRITICAL (90-100): Tables deleted OR columns deleted (data loss)
+    - MEDIUM (40-75): Column type modifications OR adding NOT NULL constraints
+    - LOW (0-20): Only additions (tables, columns, indexes) with no deletions
+
+    Args:
+        diffs: Schema differences from comparator containing:
+            - tables_added: List of added tables
+            - tables_modified: List of modified tables with column changes
+            - tables_deleted: List of deleted tables
+            - indexes_added: List of added indexes
+            - indexes_deleted: List of deleted indexes
+
+    Returns:
+        Dictionary with risk analysis:
+        {
+            "risk_level": str,  # "LOW", "MEDIUM", or "CRITICAL"
+            "score": int,  # 0-100
+            "destructive_actions_count": int,
+            "affected_tables": List[str],
+            "details": {
+                "tables_dropped": List[str],
+                "columns_dropped": List[Dict[str, str]],
+                "type_changes": List[Dict[str, Any]],
+                "not_null_additions": List[Dict[str, str]]
+            }
+        }
+    """
+    # Initialize tracking structures
+    tables_dropped: List[str] = []
+    columns_dropped: List[Dict[str, str]] = []
+    type_changes: List[Dict[str, Any]] = []
+    not_null_additions: List[Dict[str, str]] = []
+    affected_tables: List[str] = []
+
+    # Track dropped tables (CRITICAL)
+    for table in diffs.tables_deleted:
+        tables_dropped.append(table.name)
+        affected_tables.append(table.name)
+
+    # Analyze modified tables
+    for table in diffs.tables_modified:
+        table_name = table.table_name
+        affected_tables.append(table_name)
+
+        # Track dropped columns (CRITICAL)
+        for col in table.columns_deleted:
+            columns_dropped.append({
+                "table": table_name,
+                "column": col.name
+            })
+
+        # Analyze column modifications (MEDIUM risk)
+        for col_change in table.columns_modified:
+            if not (col_change.old_definition and col_change.new_definition):
+                continue
+
+            old_def = col_change.old_definition
+            new_def = col_change.new_definition
+
+            # Track type changes
+            if old_def.data_type != new_def.data_type:
+                type_changes.append({
+                    "table": table_name,
+                    "column": col_change.column_name,
+                    "old_type": old_def.data_type,
+                    "new_type": new_def.data_type
+                })
+
+            # Track NOT NULL additions
+            if old_def.nullable and not new_def.nullable:
+                not_null_additions.append({
+                    "table": table_name,
+                    "column": col_change.column_name
+                })
+
+    # Track added tables (for completeness)
+    for table in diffs.tables_added:
+        affected_tables.append(table.name)
+
+    # Calculate destructive actions count
+    destructive_actions_count = len(tables_dropped) + len(columns_dropped)
+
+    # Determine risk level and score
+    risk_level: str
+    score: int
+
+    if destructive_actions_count > 0:
+        # CRITICAL: Any data loss operations
+        risk_level = "CRITICAL"
+        score = 95
+    elif len(type_changes) > 0 or len(not_null_additions) > 0:
+        # MEDIUM: Breaking changes that don't lose data but may cause issues
+        risk_level = "MEDIUM"
+        score = 60
+    else:
+        # LOW: Only additions, no breaking changes
+        risk_level = "LOW"
+        score = 10
+
+    return {
+        "risk_level": risk_level,
+        "score": score,
+        "destructive_actions_count": destructive_actions_count,
+        "affected_tables": affected_tables,
+        "details": {
+            "tables_dropped": tables_dropped,
+            "columns_dropped": columns_dropped,
+            "type_changes": type_changes,
+            "not_null_additions": not_null_additions
+        }
+    }
+
+
 # Made with Bob
