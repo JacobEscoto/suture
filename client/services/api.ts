@@ -1,5 +1,5 @@
 import axios from "axios";
-import { SchemaComparisonRequest, AnalysisResult } from "../types/api";
+import { SchemaComparisonRequest, AnalysisResult, ValidationResult } from "../types/api";
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -35,6 +35,29 @@ export const compareSchemas = async (data: SchemaComparisonRequest): Promise<Ana
             }
 
             if (typeof detail === 'string') {
+                throw new Error(detail);
+            }
+
+            throw new Error(`Server error (${error.response.status}): ${error.response.statusText}`);
+        }
+
+        if (error.request) {
+            throw new Error("Error connecting to the Suturé server. Please ensure the server is running.");
+        }
+
+        throw new Error(error.message || "An unexpected error occurred");
+    }
+};
+
+export const validateSqlMigration = async (data: SchemaComparisonRequest): Promise<ValidationResult> => {
+    try {
+        const response = await api.post<ValidationResult>("/validate", data);
+        return response.data;
+    } catch (error: any) {
+        if (error.response) {
+            const detail = error.response.data?.detail;
+
+            if (detail && typeof detail === 'string') {
                 throw new Error(detail);
             }
 

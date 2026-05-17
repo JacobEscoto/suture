@@ -6,8 +6,8 @@ import { highlight, languages } from "prismjs";
 import "prismjs/components/prism-sql";
 import "prismjs/themes/prism-tomorrow.css";
 
-import { Database, FileCode, Zap, Trash2, AlertTriangle } from "lucide-react";
-import { SchemaComparisonRequest, ParseError } from "@/types/api";
+import { Database, FileCode, Zap, Trash2, AlertTriangle, CheckCircle2, XCircle, Shield } from "lucide-react";
+import { SchemaComparisonRequest, ParseError, ValidationResult } from "@/types/api";
 
 interface SchemaCodeEditorProps {
     label: string;
@@ -93,16 +93,19 @@ function SchemaCodeEditor({
 
 interface SchemaSplitEditorProps {
     onCompare: (data: SchemaComparisonRequest) => void;
+    onValidate: (data: SchemaComparisonRequest) => void;
     onReset?: () => void;
     isLoading: boolean;
+    isValidating: boolean;
     parseErrors?: ParseError[];
+    validationResult?: ValidationResult | null;
 }
 
 const SchemaSplitEditor = memo(function SchemaSplitEditor({
-    onCompare, onReset, isLoading, parseErrors
+    onCompare, onValidate, onReset, isLoading, isValidating, parseErrors, validationResult
 }: SchemaSplitEditorProps) {
     const [schemas, setSchemas] = useState({ v1: '', v2: '' });
-    const [isValidating, setIsValidating] = useState(false);
+    const [isDebouncing, setIsDebouncing] = useState(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     const handleSchemaChange = (key: 'v1' | 'v2', value: string) => {
@@ -123,14 +126,14 @@ const SchemaSplitEditor = memo(function SchemaSplitEditor({
             clearTimeout(debounceTimer.current);
         }
 
-        setIsValidating(true);
+        setIsDebouncing(true);
 
         // Debounce: wait 800ms before validating
         debounceTimer.current = setTimeout(() => {
             if (v1.trim() && v2.trim()) {
                 onCompare({ schema_v1: v1, schema_v2: v2 });
             }
-            setIsValidating(false);
+            setIsDebouncing(false);
         }, 800);
     }, [onCompare]);
 
@@ -147,7 +150,7 @@ const SchemaSplitEditor = memo(function SchemaSplitEditor({
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
         }
-        setIsValidating(false);
+        setIsDebouncing(false);
         if (onReset) {
             onReset();
         }
@@ -158,7 +161,7 @@ const SchemaSplitEditor = memo(function SchemaSplitEditor({
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
         }
-        setIsValidating(false);
+        setIsDebouncing(false);
         if (onReset) {
             onReset();
         }
@@ -173,8 +176,15 @@ const SchemaSplitEditor = memo(function SchemaSplitEditor({
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
         }
-        setIsValidating(false);
+        setIsDebouncing(false);
         onCompare({ schema_v1: schemas.v1, schema_v2: schemas.v2 });
+    };
+
+    const handleValidate = () => {
+        if (!schemas.v1.trim() || !schemas.v2.trim()) {
+            return;
+        }
+        onValidate({ schema_v1: schemas.v1, schema_v2: schemas.v2 });
     };
 
     // Find errors for each editor
@@ -193,7 +203,7 @@ const SchemaSplitEditor = memo(function SchemaSplitEditor({
                     placeholder="CREATE TABLE users (id SERIAL ...);"
                     icon={<Database className="w-4 h-4 text-zinc-500" />}
                     error={v1Error}
-                    isValidating={isValidating}
+                    isValidating={isDebouncing}
                 />
 
                 <SchemaCodeEditor
@@ -204,12 +214,64 @@ const SchemaSplitEditor = memo(function SchemaSplitEditor({
                     placeholder="CREATE TABLE users (id SERIAL, email VARCHAR ...);"
                     icon={<FileCode className="w-4 h-4 text-indigo-400" />}
                     error={v2Error}
-                    isValidating={isValidating}
+                    isValidating={isDebouncing}
                 />
 
             </div>
 
-            <div className="flex justify-center">
+            {/* Validation Status Display */}
+            {validationResult && (
+                <div className={`p-4 rounded-xl border ${
+                    validationResult.success
+                        ? 'bg-emerald-500/10 border-emerald-500/30'
+                        : 'bg-rose-500/10 border-rose-500/30'
+                } animate-fade-in`}>
+                    <div className="flex items-start gap-3">
+                        {validationResult.success ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                            <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-sm font-bold uppercase tracking-wider ${
+                                    validationResult.success ? 'text-emerald-400' : 'text-rose-400'
+                                }`}>
+                                    {validationResult.success ? 'Validation Passed' : 'Validation Failed'}
+                                </span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                    validationResult.blast_radius === 'LOW'
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : 'bg-rose-500/20 text-rose-300'
+                                }`}>
+                                    <Shield className="w-3 h-3 inline mr-1" />
+                                    {validationResult.blast_radius} RISK
+                                </span>
+                            </div>
+                            {validationResult.success ? (
+                                <p className="text-sm text-emerald-300/90">
+                                    SQL schemas are compatible and can be executed successfully.
+                                </p>
+                            ) : (
+                                <p className="text-sm text-rose-300/90">
+                                    {validationResult.error_message || 'SQL validation failed'}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="flex justify-center gap-3">
+                <button
+                    type="button"
+                    onClick={handleValidate}
+                    disabled={isLoading || isValidating || !schemas.v1.trim() || !schemas.v2.trim()}
+                    className="px-6 py-3 rounded-xl bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-medium shadow-lg transition-all duration-200 cursor-pointer flex items-center gap-2"
+                >
+                    <Shield className={`w-4 h-4 ${isValidating ? 'animate-pulse' : ''}`} />
+                    {isValidating ? "Validating..." : "Quick Validate"}
+                </button>
                 <button
                     type="submit"
                     disabled={isLoading || isValidating || !schemas.v1.trim() || !schemas.v2.trim()}

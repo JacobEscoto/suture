@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { compareSchemas } from "@/services/api";
-import { SchemaComparisonRequest, ParseError, AnalysisResult } from "@/types/api";
+import { compareSchemas, validateSqlMigration } from "@/services/api";
+import { SchemaComparisonRequest, ParseError, AnalysisResult, ValidationResult } from "@/types/api";
 
 export interface HistoryEntry {
     id: string;
@@ -45,6 +45,8 @@ export function useCompare() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [parseErrors, setParseErrors] = useState<ParseError[]>([]);
+    const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+    const [validating, setValidating] = useState(false);
 
     const executeCompare = useCallback(async (data: SchemaComparisonRequest) => {
         setLoading(true);
@@ -85,11 +87,29 @@ export function useCompare() {
         }
     }, []);
 
+    const executeValidation = useCallback(async (data: SchemaComparisonRequest) => {
+        setValidating(true);
+        setValidationResult(null);
+        setError(null);
+        try {
+            const response = await validateSqlMigration(data);
+            setValidationResult(response);
+            return response;
+        } catch (error: any) {
+            setError(error.message || "Validation failed");
+            return null;
+        } finally {
+            setValidating(false);
+        }
+    }, []);
+
     const resetCompare = useCallback(() => {
         setResult(null);
         setError(null);
         setLoading(false);
         setParseErrors([]);
+        setValidationResult(null);
+        setValidating(false);
     }, []);
 
     return {
@@ -97,7 +117,10 @@ export function useCompare() {
         loading,
         error,
         parseErrors,
+        validationResult,
+        validating,
         executeCompare,
+        executeValidation,
         resetCompare,
     };
 }

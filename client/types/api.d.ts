@@ -82,3 +82,9 @@ export interface AnalysisResult {
   errors: ParseError[];
   warnings: string[];
 }
+
+export interface ValidationResult {
+  success: boolean;
+  error_message: string | null;
+  blast_radius: 'LOW' | 'CRITICAL';
+}

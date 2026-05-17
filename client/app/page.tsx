@@ -9,7 +9,7 @@ import AppFooter from '@/components/layout/AppFooter';
 import { useCompare } from '@/hooks/useCompare';
 
 export default function Home() {
-  const { result, loading, error, parseErrors, executeCompare, resetCompare } = useCompare();
+  const { result, loading, error, parseErrors, validationResult, validating, executeCompare, executeValidation, resetCompare } = useCompare();
 
   return (
     <main className="min-h-screen bg-black text-zinc-50 flex flex-col" role="main">
@@ -30,9 +30,12 @@ export default function Home() {
         >
           <SchemaSplitEditor
             onCompare={executeCompare}
+            onValidate={executeValidation}
             onReset={resetCompare}
             isLoading={loading}
+            isValidating={validating}
             parseErrors={parseErrors}
+            validationResult={validationResult}
           />
         </div>
 
