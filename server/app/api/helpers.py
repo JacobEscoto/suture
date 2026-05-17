@@ -392,7 +392,7 @@ def calculate_blast_radius(diffs) -> Dict[str, Any]:
 # Made with Bob
 
 
-def validate_sql_execution(migration_sql: str, rollback_sql: str) -> Dict[str, Any]:
+def validate_sql_execution(migration_sql: str, rollback_sql: str, base_schema: str = "") -> Dict[str, Any]:
     """Validate SQL execution in a temporary SQLite in-memory database.
 
     Tests both migration and rollback SQL scripts to ensure they are 100% executable
@@ -401,6 +401,7 @@ def validate_sql_execution(migration_sql: str, rollback_sql: str) -> Dict[str, A
     Args:
         migration_sql: The forward migration SQL script to test.
         rollback_sql: The rollback SQL script to test.
+        base_schema: Optional base schema SQL to execute before migration (default: "").
 
     Returns:
         Dictionary with validation status:
@@ -412,19 +413,31 @@ def validate_sql_execution(migration_sql: str, rollback_sql: str) -> Dict[str, A
     """
     conn = None
     try:
-        # Create a temporary in-memory SQLite database
+        # Create a single in-memory SQLite database connection
         conn = sqlite3.connect(":memory:")
         cursor = conn.cursor()
 
-        # Test migration SQL execution
+        # First, execute the base schema if provided
+        if base_schema and base_schema.strip():
+            try:
+                cursor.executescript(base_schema)
+                conn.commit()
+            except sqlite3.Error as e:
+                return {
+                    "success": False,
+                    "error_message": f"Base schema execution failed: {str(e)}",
+                    "failed_script": "base_schema"
+                }
+
+        # Test migration SQL execution on the same connection
         try:
             # Execute the entire migration script
             cursor.executescript(migration_sql)
             conn.commit()
-        except sqlite3.Error as e:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError, sqlite3.IntegrityError) as e:
             return {
                 "success": False,
-                "error_message": f"Migration SQL execution failed: {str(e)}",
+                "error_message": str(e),
                 "failed_script": "migration"
             }
 
@@ -433,10 +446,10 @@ def validate_sql_execution(migration_sql: str, rollback_sql: str) -> Dict[str, A
             # Execute the rollback script to ensure clean reversal
             cursor.executescript(rollback_sql)
             conn.commit()
-        except sqlite3.Error as e:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError, sqlite3.IntegrityError) as e:
             return {
                 "success": False,
-                "error_message": f"Rollback SQL execution failed: {str(e)}",
+                "error_message": str(e),
                 "failed_script": "rollback"
             }
 
