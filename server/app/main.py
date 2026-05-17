@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router as api_router
 
@@ -17,3 +18,7 @@ app.include_router(api_router, prefix="/api")
 @app.get("/")
 async def root():
     return { "message": "Suturé is online and ready to process SQL."}
+
+@app.head("/")
+async def head_root():
+    return Response(status_code=200)
